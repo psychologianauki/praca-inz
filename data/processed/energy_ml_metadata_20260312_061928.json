@@ -1,0 +1,104 @@
+{
+  "created_at": "20260312_061928",
+  "dataset": {
+    "total_samples": 960,
+    "train_samples": 768,
+    "val_samples": 192,
+    "features": 44,
+    "target": "price"
+  },
+  "period": {
+    "start": "2026-03-03 00:00:00",
+    "end": "2026-03-12 00:00:00",
+    "train_end": "2026-03-10 00:00:00",
+    "val_start": "2026-03-11 00:00:00"
+  },
+  "features": {
+    "temporal": [
+      "is_weekend",
+      "is_business_day",
+      "dow_sin",
+      "dow_cos"
+    ],
+    "lag": [
+      "price_lag_1h",
+      "price_lag_2h",
+      "price_lag_3h",
+      "price_lag_6h",
+      "price_lag_12h",
+      "price_lag_24h",
+      "price_lag_48h"
+    ],
+    "rolling": [
+      "price_mean_6h",
+      "price_std_6h",
+      "price_max_6h",
+      "price_min_6h",
+      "price_position_6h",
+      "price_mean_12h",
+      "price_std_12h",
+      "price_max_12h",
+      "price_min_12h",
+      "price_position_12h",
+      "price_mean_24h",
+      "price_std_24h",
+      "price_max_24h",
+      "price_min_24h",
+      "price_position_24h",
+      "price_mean_48h",
+      "price_std_48h",
+      "price_max_48h",
+      "price_min_48h",
+      "price_position_48h",
+      "volatility_6h",
+      "volatility_24h"
+    ],
+    "weather": [
+      "temperature",
+      "wind_speed",
+      "cloud_cover",
+      "wind_power_potential",
+      "heating_demand"
+    ],
+    "flows": []
+  },
+  "target_stats": {
+    "train": {
+      "mean": 467.1812239583333,
+      "std": 252.5772614568043,
+      "min": -96.58,
+      "max": 1199.71,
+      "median": 486.265
+    },
+    "val": {
+      "mean": 435.78859375,
+      "std": 222.61708290152123,
+      "min": 2.57,
+      "max": 1179.98,
+      "median": 428.28999999999996
+    }
+  },
+  "data_quality": {
+    "missing_in_features": 3701,
+    "missing_percentage": 8.761837121212121
+  },
+  "ml_recommendations": {
+    "algorithms": [
+      "RandomForest",
+      "XGBoost",
+      "LinearRegression",
+      "LightGBM"
+    ],
+    "preprocessing": [
+      "StandardScaler",
+      "feature_selection",
+      "outlier_removal"
+    ],
+    "validation": "TimeSeriesSplit",
+    "metrics": [
+      "MAE",
+      "RMSE",
+      "MAPE"
+    ]
+  }
+}

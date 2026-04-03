@@ -1,0 +1,142 @@
+services:
+  db:
+    image: timescale/timescaledb:latest-pg16
+    container_name: inzynierka_db
+    restart: always
+    env_file:
+      - .env
+    ports:
+      - "5432:5432"
+    volumes:
+      - inzynierka_pgdata:/var/lib/postgresql/data
+    networks:
+      - inzynierka_network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-inzynierka}" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    image: inzynierka_app_image
+    container_name: inzynierka_app
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
+    ports:
+      - "0.0.0.0:8000:8000"
+    volumes:
+      - .:/app
+    environment:
+      # Nadpisujemy hosta, aby wewnątrz kontenera aplikacja szukała bazy pod nazwą serwisu "db"
+      - POSTGRES_SERVER=db
+    command: sh -c "alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
+    networks:
+      - inzynierka_network
+    restart: on-failure
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: inzynierka_grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - inzynierka_network
+    volumes:
+      - inzynierka_grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
+
+  adminer:
+    image: adminer:latest
+    container_name: inzynierka_adminer
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - inzynierka_network
+    restart: always
+    environment:
+      - ADMINER_DEFAULT_SERVER=db
+
+  # scheduler:
+  #   build: .
+  #   image: inzynierka_app_image
+  #   container_name: inzynierka_scheduler
+  #   depends_on:
+  #     db:
+  #       condition: service_healthy
+  #   env_file:
+  #     - .env
+  #   volumes:
+  #     - .:/app
+  #     - /var/run/docker.sock:/var/run/docker.sock  # Dostęp do Docker daemon
+  #   environment:
+  #     - POSTGRES_SERVER=db
+  #   working_dir: /app
+  #   networks:
+  #     - inzynierka_network
+  #   command: python scheduler/task_scheduler.py
+  #   restart: unless-stopped
+
+  fetch_scheduler:
+    build: .
+    image: inzynierka_app_image
+    container_name: inzynierka_fetch_scheduler
+    depends_on:
+      app:
+        condition: service_started
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+    environment:
+      - POSTGRES_SERVER=db
+    working_dir: /app
+    networks:
+      - inzynierka_network
+    command: python scheduler/fetch_all_scheduler.py
+    restart: unless-stopped
+
+  # --- SCRAPERS (SCRAPOWANIE DANYCH) ---
+  scrapers:
+    build: .
+    image: inzynierka_app_image
+    container_name: inzynierka_scrapers
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+      - /tmp:/tmp
+    environment:
+      - POSTGRES_SERVER=db
+    working_dir: /app
+    networks:
+      - inzynierka_network
+    restart: "no"  # Uruchamiamy tylko na żądanie
+    profiles: ["scrapers"]  # Profil dla scraperów
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+
+volumes:
+  inzynierka_pgdata:
+  inzynierka_grafana_data:
+
+networks:
+  inzynierka_network:
